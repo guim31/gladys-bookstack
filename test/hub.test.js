@@ -166,6 +166,24 @@ test('more than ten changes: ten now, the rest at the next read, oldest first', 
   );
 });
 
+test('a page created then edited, announced a read later, is still "created"', async (t) => {
+  const world = await createWorld();
+  t.after(() => world.app.stop());
+  const late = world.server.addPage({ name: 'Late', bookId: 1 });
+  for (let i = 0; i < 10; i += 1) {
+    world.server.addPage({ name: `Note ${i}`, bookId: 2 });
+  }
+  world.server.editPage(late.id);
+  await world.hub.refresh();
+  await world.hub.refresh();
+  assert.deepEqual(
+    changed(world.fake)
+      .filter((e) => e.data.page_name === 'Late')
+      .map((e) => e.data.change),
+    ['created'],
+  );
+});
+
 test('a burst (an import): ten announced, the rest seen', async (t) => {
   const world = await createWorld();
   t.after(() => world.app.stop());

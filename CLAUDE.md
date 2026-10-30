@@ -109,8 +109,9 @@ test/fixtures/bookstack/v26.09.2/ bodies recorded on a real BookStack v26.09.2
 - `PUT /pages/{id}` with `markdown` switches the page to the Markdown editor:
   a WYSIWYG page is extended with `html` instead. Without `markdown` nor
   `html`, `POST /pages` is a 422.
-- The triggers keep `{ instance, at, ids }`: the time of the newest change
-  seen and the pages changed at that very second (timestamps have one-second
+- The triggers keep `{ instance, at, ids, since }`: the time of the newest
+  change seen, the pages changed at that very second, and the end of the last
+  read that went through its whole list (a page created after it is "created") (timestamps have one-second
   precision), read with `filter[updated_at:gte]`. Writes of the integration
   are kept as `<page id>@<updated_at>` and never announced. An event Gladys refuses (5xx, 429), or a page BookStack fails to read, is retried at the next read, three reads at most; the events of a change already taken are not sent again. Changes are read oldest first, ten announced per read, the next ones at the next read; past 50 at once (a burst), the mark jumps to the newest.
 - Scene trigger filters only compare one value: "Tagged page changed" is fired

@@ -136,7 +136,7 @@ export class Hub {
     this.failure = null;
     this.announced = false;
     this.lastStatus = '';
-    /** what the triggers already saw: { instance, at, ids } */
+    /** what the triggers already saw: { instance, at, ids, since } */
     this.seen = null;
     /** `<page id>@<time>` of the changes written by the integration */
     this.own = new Set();
@@ -173,7 +173,12 @@ export class Hub {
       Number.isFinite(saved.at) &&
       Array.isArray(saved.ids) &&
       saved.ids.every(Number.isInteger)
-        ? { instance: saved.instance, at: saved.at, ids: saved.ids }
+        ? {
+            instance: saved.instance,
+            at: saved.at,
+            ids: saved.ids,
+            since: Number.isFinite(saved.since) ? saved.since : saved.at,
+          }
         : null;
     // The pages written from Gladys but not read back yet: never announced,
     // even after a restart.
@@ -414,6 +419,9 @@ export class Hub {
     const instance = this.instance.id;
     const known = this.#known(instance);
     let mark = known ? { at: known.at, ids: known.ids } : null;
+    // The end of the last read that went through its whole list: a page
+    // created after it is "created", even when its event waited a read.
+    let since = known?.since ?? known?.at ?? 0;
     if (!known || !changes) {
       // Baseline: the newest change of the wiki (an empty wiki: any page to come).
       mark = null;
@@ -421,6 +429,7 @@ export class Hub {
         mark = advance(mark, page);
       }
       mark ??= { at: 0, ids: [] };
+      since = mark.at;
     } else {
       const fresh = changes.data.filter((p) => !seenBy(known, p) && !this.own.has(ownKey(p)));
       const pending = fresh.slice(0, MAX_EVENTS_PER_READ);
@@ -430,15 +439,17 @@ export class Hub {
       }
       // The oldest first; the mark follows each page Gladys took.
       let stopped = false;
+      let deferred = false;
       for (const page of changes.data) {
         if (this.own.has(ownKey(page)) || seenBy(known, page)) {
           mark = advance(mark, page);
           continue;
         }
         if (!pending.includes(page)) {
+          deferred = true;
           break; // past ten: the next read
         }
-        if ((await this.#fire(client, page, known.at)) === 'retry') {
+        if ((await this.#fire(client, page, since)) === 'retry') {
           stopped = true;
           break;
         }
@@ -450,13 +461,16 @@ export class Hub {
           mark = advance(mark, page);
         }
       }
+      if (!stopped && (burst || !deferred)) {
+        since = mark.at;
+      }
     }
     for (const key of this.own) {
       if (Number(key.split('@')[1]) <= mark.at) {
         this.own.delete(key);
       }
     }
-    const next = { instance, at: mark.at, ids: mark.ids, own: [...this.own] };
+    const next = { instance, at: mark.at, ids: mark.ids, since, own: [...this.own] };
     if (JSON.stringify(next) !== JSON.stringify({ ...this.seen, own: next.own })) {
       this.seen = next;
       await this.store.save(next);
