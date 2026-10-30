@@ -55,10 +55,12 @@ export const DEFAULT_TIMINGS = {
 };
 
 export const LATEST_COUNT = 20;
-// The changed pages read at once: past that many changes between two reads
-// (an import, a book moved), the oldest are recorded as seen without firing.
+// The changed pages read at once, the oldest first: past that many changes
+// between two reads (an import, a book moved), it is a burst — ten are
+// announced and the rest is recorded as seen without firing.
 export const CHANGES_PAGE = 50;
 // Each announced change costs one more request (its tags): bounded per read.
+// Below a burst, the changes past ten wait for the next read, never lost.
 export const MAX_EVENTS_PER_READ = 10;
 // The pages written by the integration itself are never announced (a scene
 // bound to "Page changed" that writes a page would loop).
@@ -138,7 +140,7 @@ export class Hub {
     this.seen = null;
     /** `<page id>@<time>` of the changes written by the integration */
     this.own = new Set();
-    /** `<page id>@<time>` -> reads at which Gladys refused its event */
+    /** `<page id>@<time>` -> { tries, sent }: failed reads, events Gladys took */
     this.retries = new Map();
     this.eventFailing = false;
     this.devicesFailing = false;
@@ -330,6 +332,7 @@ export class Hub {
         known
           ? client.pages({
               count: CHANGES_PAGE,
+              sort: '+updated_at',
               filters: { 'updated_at:gte': filterDate(known.at) },
             })
           : null,
@@ -364,7 +367,7 @@ export class Hub {
     if (client !== this.client || this.stopped || !this.instance) {
       return; // the configuration changed meanwhile
     }
-    await this.#announce(client, recent.data, changes?.data ?? null);
+    await this.#announce(client, recent.data, changes ?? null);
     await this.updateConnectionStatus();
   }
 
@@ -405,7 +408,7 @@ export class Hub {
    * integration announces nothing already there.
    * @param {BookStackClient} client
    * @param {object[]} recent the newest changed pages (baseline)
-   * @param {object[] | null} changes the pages changed since the mark, newest first
+   * @param {{ data: object[], total: number } | null} changes the pages changed since the mark, oldest first
    */
   async #announce(client, recent, changes) {
     const instance = this.instance.id;
@@ -419,25 +422,31 @@ export class Hub {
       }
       mark ??= { at: 0, ids: [] };
     } else {
-      const fresh = changes.filter((p) => !seenBy(known, p) && !this.own.has(ownKey(p)));
+      const fresh = changes.data.filter((p) => !seenBy(known, p) && !this.own.has(ownKey(p)));
       const pending = fresh.slice(0, MAX_EVENTS_PER_READ);
-      if (fresh.length > pending.length || changes.length >= CHANGES_PAGE) {
-        logger.info(`Many pages changed at once: ${pending.length} announced`);
+      const burst = changes.total > CHANGES_PAGE;
+      if (burst) {
+        logger.info(`${changes.total} pages changed at once: ${pending.length} announced`);
       }
       // The oldest first; the mark follows each page Gladys took.
-      pending.reverse();
-      let complete = true;
-      for (const page of pending) {
-        const outcome = await this.#fire(client, page, known.at);
-        if (outcome === 'retry') {
-          complete = false;
+      let stopped = false;
+      for (const page of changes.data) {
+        if (this.own.has(ownKey(page)) || seenBy(known, page)) {
+          mark = advance(mark, page);
+          continue;
+        }
+        if (!pending.includes(page)) {
+          break; // past ten: the next read
+        }
+        if ((await this.#fire(client, page, known.at)) === 'retry') {
+          stopped = true;
           break;
         }
         mark = advance(mark, page);
       }
-      if (complete) {
-        // Every change of the list is seen now: announced, skipped or ours.
-        for (const page of changes) {
+      if (burst && !stopped) {
+        // The rest of a burst is seen: the mark jumps to the newest change.
+        for (const page of recent) {
           mark = advance(mark, page);
         }
       }
@@ -460,23 +469,41 @@ export class Hub {
    * @returns {Promise<'done' | 'retry'>}
    */
   async #fire(client, listed, since) {
+    const key = ownKey(listed);
+    const attempt = this.retries.get(key) ?? { tries: 0, sent: 0 };
+    // A change that keeps failing, read after read, is given up: it would
+    // hold back every later one.
+    const again = (what) => {
+      const tries = attempt.tries + 1;
+      if (tries < MAX_TRIES) {
+        this.retries.set(key, { ...attempt, tries });
+        return 'retry';
+      }
+      logger.warn(`Page ${listed.id} not announced: ${what} ${tries} times`);
+      this.retries.delete(key);
+      return 'done';
+    };
     let page;
     try {
       page = await client.page(listed.id);
     } catch (err) {
       if (err instanceof BookStackError && (err.kind === 'not_found' || err.kind === 'forbidden')) {
+        this.retries.delete(key);
         return 'done'; // deleted or hidden meanwhile: nothing to announce
       }
       logger.debug(`Page ${listed.id} not read: ${err.message}`);
-      return 'retry';
+      return again('BookStack failed to read it');
     }
     const data = this.#eventData(page, listed, since);
     const events = [
       [TRIGGERS.changed, data],
       ...tagNames(page.tags).map((tag) => [TRIGGERS.tagged, { ...data, tag: tag.slice(0, 1000) }]),
     ];
-    const key = ownKey(listed);
-    for (const [trigger, eventData] of events) {
+    // The events Gladys already took for this change are not sent again.
+    for (const [index, [trigger, eventData]] of events.entries()) {
+      if (index < attempt.sent) {
+        continue;
+      }
       logger.debug(`${trigger}: ${page.id}`);
       try {
         await this.gladys.publishSceneEvent(trigger, eventData);
@@ -484,6 +511,7 @@ export class Hub {
           logger.info('Scene events accepted again');
         }
         this.eventFailing = false;
+        attempt.sent = index + 1;
       } catch (err) {
         if (this.eventFailing) {
           logger.debug(`Cannot fire ${trigger}: ${err.message}`);
@@ -497,17 +525,10 @@ export class Hub {
         const status = err?.status;
         const final = Number.isInteger(status) && status >= 400 && status < 500 && status !== 429;
         if (final) {
+          attempt.sent = index + 1;
           continue;
         }
-        // A change Gladys refuses read after read is given up: it would
-        // hold back every later one.
-        const tries = (this.retries.get(key) ?? 0) + 1;
-        if (tries < MAX_TRIES) {
-          this.retries.set(key, tries);
-          return 'retry';
-        }
-        logger.warn(`Page ${page.id} not announced: Gladys refused it ${tries} times`);
-        break;
+        return again('Gladys refused it');
       }
     }
     this.retries.delete(key);

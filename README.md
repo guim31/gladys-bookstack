@@ -56,8 +56,7 @@ and the page list gives the same changes to any user.
 ## Limitations
 
 - One BookStack user, the owner of the token, with their permissions.
-- The triggers fire at the next read, not instantly; at most ten pages per
-  read. Deleted and moved pages are not announced.
+- The triggers fire at the next read, not instantly; at most ten pages per read (the next ones at the next read; past 50 changes at once, the rest is skipped). Deleted and moved pages are not announced.
 - Nothing is ever deleted or moved in BookStack.
 
 ## Development

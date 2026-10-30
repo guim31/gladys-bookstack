@@ -86,7 +86,8 @@ export function createBookStack() {
     updated_by: { id: 1, name: page.updated_by_name, slug: slugify(page.updated_by_name) },
     owned_by: { id: 1, name: 'Admin', slug: 'admin' },
     markdown: page.markdown,
-    html: page.html,
+    // `html` is rendered (includes resolved), `raw_html` is stored.
+    html: page.rendered ?? page.html,
     raw_html: page.html,
     tags: page.tags,
   });

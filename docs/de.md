@@ -83,7 +83,7 @@ durch Kommas getrennt), **Seiten-ID** und **Schlagwort** beim zweiten Auslöser.
 
 Das erste Lesen nach der Installation ist still: Vorhandene Seiten werden nicht
 gemeldet. Von dieser Integration geschriebene Seiten werden nie gemeldet.
-Höchstens zehn Seiten werden pro Lesen gemeldet; der Rest gilt als gesehen.
+Höchstens zehn Seiten werden pro Lesen gemeldet, die ältesten zuerst; die weiteren warten auf das nächste Lesen. Bei mehr als 50 Änderungen zwischen zwei Lesevorgängen (ein Import) werden zehn gemeldet, der Rest gilt als gesehen.
 
 ## Szenen-Aktionen
 

@@ -78,8 +78,7 @@ Variables: **Page name**, **Book**, **Change** (`created` or `updated`),
 commas), **Page id**, and **Tag** for the second trigger.
 
 The first read after the installation is silent: the pages already there are
-not announced. The pages written by this integration are never announced. At
-most ten pages are announced per read; the rest is counted as seen.
+not announced. The pages written by this integration are never announced. At most ten pages are announced per read, the oldest first; the next ones wait for the next read. Past 50 changes between two reads (an import), ten are announced and the rest is counted as seen.
 
 ## Scene actions
 

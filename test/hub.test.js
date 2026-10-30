@@ -147,23 +147,75 @@ test('page changed: silent baseline, created then updated, book, tags, author', 
   );
 });
 
-test('many changes at once: ten announced, the rest seen', async (t) => {
+test('more than ten changes: ten now, the rest at the next read, oldest first', async (t) => {
   const world = await createWorld();
   t.after(() => world.app.stop());
   for (let i = 0; i < 15; i += 1) {
-    world.server.addPage({ name: `Import ${i}`, bookId: 2 });
+    world.server.addPage({ name: `Note ${i}`, bookId: 2 });
   }
   await world.hub.refresh();
   assert.deepEqual(
     changed(world.fake).map((e) => e.data.page_name),
-    ['Import 5', 'Import 6', 'Import 7', 'Import 8', 'Import 9', 'Import 10', 'Import 11'].concat([
-      'Import 12',
-      'Import 13',
-      'Import 14',
-    ]),
+    Array.from({ length: 10 }, (_, i) => `Note ${i}`),
   );
   await world.hub.refresh();
-  assert.equal(changed(world.fake).length, 10, 'never twice');
+  await world.hub.refresh();
+  assert.deepEqual(
+    changed(world.fake).map((e) => e.data.page_name),
+    Array.from({ length: 15 }, (_, i) => `Note ${i}`),
+  );
+});
+
+test('a burst (an import): ten announced, the rest seen', async (t) => {
+  const world = await createWorld();
+  t.after(() => world.app.stop());
+  for (let i = 0; i < 60; i += 1) {
+    world.server.addPage({ name: `Import ${i}`, bookId: 2 });
+  }
+  await world.hub.refresh();
+  assert.equal(changed(world.fake).length, 10);
+  world.server.addPage({ name: 'After' });
+  await world.hub.refresh();
+  assert.deepEqual(changed(world.fake).at(-1).data.page_name, 'After');
+  assert.equal(changed(world.fake).length, 11, 'never twice');
+});
+
+test('an event Gladys took is not sent again when a later one fails', async (t) => {
+  const world = await createWorld();
+  t.after(() => world.app.stop());
+  const publish = world.gladys.publishSceneEvent.bind(world.gladys);
+  let fail = 1;
+  world.gladys.publishSceneEvent = async (key, data) => {
+    if (key === 'tagged_page_changed' && fail > 0) {
+      fail -= 1;
+      throw Object.assign(new Error('busy'), { status: 503 });
+    }
+    return publish(key, data);
+  };
+  world.server.addPage({ name: 'Tagged', tags: ['incident'] });
+  await world.hub.refresh();
+  await world.hub.refresh();
+  assert.equal(changed(world.fake).length, 1);
+  assert.equal(tagged(world.fake).length, 1);
+});
+
+test('a page BookStack cannot read is given up, the next ones go through', async (t) => {
+  const world = await createWorld();
+  t.after(() => world.app.stop());
+  const broken = world.server.addPage({ name: 'Broken' });
+  world.server.addPage({ name: 'Fine' });
+  const fetch = world.server.fetch;
+  world.hub.client.fetch = async (url, init) =>
+    url.endsWith(`/api/pages/${broken.id}`)
+      ? new Response('{"error":{"message":"Server Error","code":500}}', { status: 500 })
+      : fetch(url, init);
+  for (let i = 0; i < MAX_TRIES; i += 1) {
+    await world.hub.refresh();
+  }
+  assert.deepEqual(
+    changed(world.fake).map((e) => e.data.page_name),
+    ['Fine'],
+  );
 });
 
 test('an event Gladys did not take is fired again at the next read', async (t) => {
@@ -271,6 +323,7 @@ test('append_line: a journal page in Markdown, created then extended, never anno
 test('append_line: a WYSIWYG page gets an escaped paragraph', async (t) => {
   const world = await createWorld();
   t.after(() => world.app.stop());
+  world.server.state.pages.find((p) => p.id === 7).rendered = '<p>stale rendering</p>';
   const ack = await world.fake.sceneAction('append_line', {
     book: 'Maison',
     page: 'Chaudière',
@@ -279,6 +332,7 @@ test('append_line: a WYSIWYG page gets an escaped paragraph', async (t) => {
   });
   assert.equal(ack.success, true, ack.error);
   const page = world.server.state.pages.find((p) => p.id === 7);
+  assert.ok(!page.html.includes('stale rendering'), 'the stored content is extended');
   assert.ok(page.html.endsWith('\n<p>&lt;b&gt;Purge&lt;/b&gt; &amp; contrôle</p>'), page.html);
   assert.ok(page.html.startsWith('<p id="bkmrk-'), 'the page keeps its content');
 });

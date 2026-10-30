@@ -81,8 +81,7 @@ Variables: **Nombre de la página**, **Libro**, **Cambio** (`created` o
 para el segundo disparador.
 
 La primera lectura tras la instalación es silenciosa: las páginas ya presentes
-no se anuncian. Las páginas escritas por esta integración nunca se anuncian. Se
-anuncian como máximo diez páginas por lectura; el resto se cuenta como visto.
+no se anuncian. Las páginas escritas por esta integración nunca se anuncian. Se anuncian como máximo diez páginas por lectura, las más antiguas primero; las siguientes esperan a la próxima lectura. Si hay más de 50 cambios entre dos lecturas (una importación), se anuncian diez y el resto se cuenta como visto.
 
 ## Acciones de escena
 

@@ -169,8 +169,8 @@ export function commandMessage(code, values = {}) {
     Object.entries(COMMAND_ERRORS).map(([language, table]) => [
       language,
       (table[code] ?? table.unreachable)
-        .replace('{name}', values.name ?? '')
-        .replace('{detail}', values.detail ?? '')
+        .replace('{name}', () => values.name ?? '')
+        .replace('{detail}', () => values.detail ?? '')
         .slice(0, 200),
     ]),
   );

@@ -82,8 +82,7 @@ Variables : **Nom de la page**, **Livre**, **Changement** (`created` ou
 
 La première lecture après l'installation est silencieuse : les pages déjà là ne
 sont pas annoncées. Les pages écrites par cette intégration ne sont jamais
-annoncées. Dix pages au plus sont annoncées par lecture ; le reste est compté
-comme vu.
+annoncées. Dix pages au plus sont annoncées par lecture, les plus anciennes d'abord ; les suivantes attendent la lecture d'après. Au-delà de 50 changements entre deux lectures (un import), dix sont annoncés et le reste est compté comme vu.
 
 ## Actions de scène
 

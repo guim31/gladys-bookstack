@@ -128,6 +128,9 @@ export function appendLine(page, line) {
     return { markdown: before ? `${before}\n\n${line}` : line };
   }
   const html = `<p>${escapeHtml(line)}</p>`;
-  const before = (page.html ?? '').replace(/\s+$/, '');
+  // `raw_html` is the stored content; `html` has the includes
+  // ({{@id#bkmrk-…}}) resolved, which would freeze them in the page.
+  const stored = typeof page.raw_html === 'string' ? page.raw_html : page.html;
+  const before = (stored ?? '').replace(/\s+$/, '');
   return { html: before ? `${before}\n${html}` : html };
 }
