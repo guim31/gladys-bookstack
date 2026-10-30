@@ -10,6 +10,8 @@ the notes of the version's GitHub Release.
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-10-30
+
 ### Added
 
 - A BookStack device: books, shelves, pages, pages changed today, and the name
@@ -23,4 +25,5 @@ the notes of the version's GitHub Release.
   line to a BookStack page" (a dated journal, created at its first line).
 - Texts and documentation in English, French, German and Spanish.
 
-[Unreleased]: https://github.com/guim31/gladys-bookstack/commits/main
+[Unreleased]: https://github.com/guim31/gladys-bookstack/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/guim31/gladys-bookstack/releases/tag/v1.0.0
