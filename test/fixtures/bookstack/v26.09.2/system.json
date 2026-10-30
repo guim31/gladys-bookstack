@@ -1,0 +1,10 @@
+{
+  "status": 200,
+  "body": {
+    "version": "v26.09.2",
+    "instance_id": "5a1e0c3f-0000-4000-8000-000000000001",
+    "app_name": "BookStack",
+    "app_logo": "http://192.0.2.50:6875/logo.png",
+    "base_url": "http://192.0.2.50:6875"
+  }
+}

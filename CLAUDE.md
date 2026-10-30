@@ -16,8 +16,8 @@ its only runtime dependency. It started from the official JavaScript template.
 ```bash
 npm install
 npm test                                  # node --test, the built-in runner
-node --test test/devices.test.js          # one file
-node --test --test-name-pattern "plug"    # tests whose name matches
+node --test test/hub.test.js              # one file
+node --test --test-name-pattern "widget"  # tests whose name matches
 npm run lint                              # ESLint
 npm run format:check                      # Prettier, as the CI runs it
 npm run format                            # Prettier, fix in place
@@ -32,15 +32,20 @@ pushing.
 
 ```
 index.js                          SDK wiring only: handlers registered before connect()
-src/devices/index.js              registry of the device blueprints + dispatch helpers
-src/devices/<type>.js             one device type per file (buildDevice, onPoll, onSetValue...)
+src/app.js                        registers every SDK handler on the hub (shared with the tests)
+src/hub.js                        the link to BookStack: timers, devices, states, triggers, status, writes
+src/devices.js                    the BookStack device and the book devices, their states
+src/bookstack/client.js           REST API (Token id:secret), errors by kind
+src/bookstack/model.js            books and pages -> plain values; books, tags and lines typed by users
+src/store.js                      /data/bookstack-state.json: the newest change the triggers saw
 src/scenes.js                     scene action handlers (manifest `scene_actions`)
-src/widgets.js                    dashboard widget handlers (manifest `widgets`)
+src/widgets.js                    dashboard widget (manifest `widgets`)
+src/texts.js                      every text produced by the container, in four languages
 src/config.js                     DEFAULT_CONFIG (mirrors the manifest defaults) + normalization
-src/weather.js                    example driver (Open-Meteo)
 gladys-assistant-integration.json manifest: name, config_schema, actions, image...
-docs/en.md, docs/fr.md            user documentation, re-hosted by Gladys (mandatory)
-test/                             node --test, against the SDK's fake Gladys (integration-sdk/testing)
+docs/{en,fr,de,es}.md             user documentation, re-hosted by Gladys (same sections)
+test/                             node --test, SDK fake Gladys + fake BookStack (test/helpers/)
+test/fixtures/bookstack/v26.09.2/ bodies recorded on a real BookStack v26.09.2
 .github/scripts/release.mjs       release helpers (manifest bump, changelog), tested in test/
 ```
 
@@ -70,10 +75,50 @@ test/                             node --test, against the SDK's fake Gladys (in
   `type: "provider"`: 5.1.0). `test/manifest.test.js` ties the manifest to the
   code (defaults, action, scene and widget handlers): change both sides
   together.
-- **User-facing text** is bilingual (English and French): action messages,
-  manifest texts, and `docs/en.md` / `docs/fr.md`, kept in sync.
+- **User-facing text** exists in English, French, German and Spanish: action
+  messages, manifest texts, widget content, feature names, and
+  `docs/{en,fr,de,es}.md`, kept in sync (`test/i18n.test.js`).
 - **Style.** Prettier formats, ESLint catches mistakes. Comments explain why,
   in English. Tests never touch the network.
+
+## BookStack
+
+- **REST API**, token in `Authorization: Token <id>:<secret>`, created in My
+  Account → Access & Security → API Tokens (the secret is shown once). Its
+  owner needs the role permission "Access system API" (`access-api`, Admin
+  only by default): without it every call is a 403 "The owner of the used API
+  token does not have permission to make API calls". Rate limit: 180 requests
+  per minute per user (`X-RateLimit-*` headers).
+- To script a test server: `php artisan tinker` in the container, a
+  `BookStack\Api\ApiToken` with `token_id`, `secret` = `Hash::make(...)`,
+  `user_id`, `expires_at`. Default login `admin@admin.com` / `password`.
+- Errors are `{ error: { message, code } }`: 401 for a missing, malformed or
+  unknown token, 403 for the API permission or the permission of the request
+  (create a page in a read-only book), JSON 404 for a missing item, 422 with
+  `validation` (first message shown). An unknown route is an **HTML** 404:
+  the client calls it "not BookStack".
+- Lists are `{ data, total }`, `count` ≤ 500, `offset`, `sort=-updated_at`,
+  `filter[field:op]=value` (`eq`, `gt`, `gte`, `like`…); dates in a filter in
+  UTC, ISO or `Y-m-d H:i:s`. `count=1` gives a total cheaply. The page list
+  carries **no tags**: `GET /pages/{id}` does (with `editor`, `markdown`,
+  `html`, `updated_by: { name }`).
+- Since v26 books, shelves, chapters and pages share **one id sequence**
+  (book 1, shelf 3, chapter 4, page 5…): never assume a page id from a count.
+- `GET /system` (`instance_id`, `version`) exists on recent versions only: the
+  instance id names the devices; an older BookStack falls back to its address.
+- `PUT /pages/{id}` with `markdown` switches the page to the Markdown editor:
+  a WYSIWYG page is extended with `html` instead. Without `markdown` nor
+  `html`, `POST /pages` is a 422.
+- The triggers keep `{ instance, at, ids, since }`: the time of the newest
+  change seen, the pages changed at that very second, and the end of the last
+  read that went through its whole list (a page created after it is "created") (timestamps have one-second
+  precision), read with `filter[updated_at:gte]`. Writes of the integration
+  are kept as `<page id>@<updated_at>` and never announced. An event Gladys refuses (5xx, 429), or a page BookStack fails to read, is retried at the next read, three reads at most; the events of a change already taken are not sent again. Changes are read oldest first, ten announced per read, the next ones at the next read; past 50 at once (a burst), the mark jumps to the newest.
+- Scene trigger filters only compare one value: "Tagged page changed" is fired
+  once per tag name of the page, its `tag` filter required.
+- Testing with Docker: `lscr.io/linuxserver/bookstack` (`APP_URL`, `APP_KEY`
+  `base64:…`, `DB_HOST`, `DB_USERNAME`, `DB_PASSWORD`, `DB_DATABASE`) and
+  `mariadb:11`, on a bridge network, no port published (`docker exec … curl`).
 
 ---
 

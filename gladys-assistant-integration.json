@@ -1,177 +1,845 @@
 {
   "manifest_version": 1,
   "type": "device",
-  "name": "Demo Devices Template",
+  "name": "BookStack",
   "description": {
-    "en": "Starter template showing sensors, a switch, a dimmable light and a smart plug.",
-    "fr": "Template de démarrage : capteurs, interrupteur, lampe variable et prise connectée."
+    "en": "Your BookStack wiki in Gladys: counters, changed pages, pages and journal lines from scenes.",
+    "fr": "Votre wiki BookStack dans Gladys : compteurs, pages modifiées, pages et journal écrits par scène.",
+    "de": "Dein BookStack-Wiki in Gladys: Zähler, geänderte Seiten, Seiten und Journal aus Szenen.",
+    "es": "Su wiki BookStack en Gladys: contadores, páginas modificadas, páginas y diario desde escenas."
   },
   "version": "1.0.0",
-  "docker_image": "ghcr.io/gladysassistant/integration-template-js:1.0.0",
+  "docker_image": "ghcr.io/guim31/gladys-bookstack:1.0.0",
   "gladys_version": ">=5.1.0",
-  "cover_image": "https://raw.githubusercontent.com/GladysAssistant/integration-template-js/master/cover.png",
-  "categories": ["lighting", "security", "environment"],
-  "transports": ["local", "cloud"],
+  "cover_image": "https://raw.githubusercontent.com/guim31/gladys-bookstack/main/cover.png",
+  "categories": ["services"],
+  "transports": ["local"],
   "config_schema": [
     {
       "key": "intro",
       "type": "section",
-      "label": { "en": "Getting started", "fr": "Pour commencer" },
+      "label": {
+        "en": "Connect BookStack",
+        "fr": "Connecter BookStack",
+        "de": "BookStack verbinden",
+        "es": "Conectar BookStack"
+      },
       "description": {
-        "en": "The demo weather station reads real data from the free Open-Meteo API: pick the coordinates to observe. No account, no API key.",
-        "fr": "La station météo de démonstration lit de vraies données via l'API gratuite Open-Meteo : choisissez les coordonnées à observer. Pas de compte, pas de clé d'API."
+        "en": "Enter the address of your BookStack and an API token: in BookStack, open My Account → Access & Security → API Tokens and create one. Its owner needs the \"Access system API\" permission (the Admin role has it), and the right to edit the books your scenes write in.",
+        "fr": "Saisissez l'adresse de votre BookStack et un jeton d'API : dans BookStack, ouvrez Mon compte → Accès et sécurité → Jetons API et créez-en un. Son propriétaire doit avoir la permission « Accès à l'API du système » (le rôle Admin l'a), et le droit de modifier les livres où vos scènes écrivent.",
+        "de": "Gib die Adresse deines BookStack und ein API-Token ein: Öffne in BookStack Mein Account → Zugang & Sicherheit → API-Token und erstelle eines. Sein Besitzer braucht die Berechtigung „Systemzugriffs-API“ (die Rolle Admin hat sie) und das Recht, die Bücher zu bearbeiten, in die deine Szenen schreiben.",
+        "es": "Introduzca la dirección de su BookStack y un token de API: en BookStack, abra Mi cuenta → Acceso y seguridad → Tokens API y cree uno. Su propietario necesita el permiso «API de sistema de acceso» (el rol Admin lo tiene) y el derecho de editar los libros en los que escriben sus escenas."
       },
       "links": [
         {
-          "url": "https://open-meteo.com/en/docs",
-          "label": { "en": "Open-Meteo documentation", "fr": "Documentation Open-Meteo" }
+          "url": "https://www.bookstackapp.com/docs/",
+          "label": {
+            "en": "BookStack documentation",
+            "fr": "Documentation de BookStack",
+            "de": "BookStack-Dokumentation",
+            "es": "Documentación de BookStack"
+          }
         }
       ]
     },
     {
-      "key": "latitude",
-      "type": "number",
-      "label": { "en": "Latitude", "fr": "Latitude" },
-      "description": {
-        "en": "Latitude used for the demo weather sensor.",
-        "fr": "Latitude utilisée par le capteur météo de démonstration."
+      "key": "url",
+      "type": "string",
+      "label": {
+        "en": "BookStack address",
+        "fr": "Adresse de BookStack",
+        "de": "BookStack-Adresse",
+        "es": "Dirección de BookStack"
       },
-      "placeholder": { "en": "e.g. 48.8566", "fr": "ex. 48.8566" },
+      "placeholder": {
+        "en": "e.g. 192.168.1.50:6875",
+        "fr": "ex. 192.168.1.50:6875",
+        "de": "z. B. 192.168.1.50:6875",
+        "es": "p. ej. 192.168.1.50:6875"
+      },
+      "description": {
+        "en": "The address you open BookStack at (its APP_URL).",
+        "fr": "L'adresse à laquelle vous ouvrez BookStack (son APP_URL).",
+        "de": "Die Adresse, unter der du BookStack öffnest (seine APP_URL).",
+        "es": "La dirección en la que abre BookStack (su APP_URL)."
+      },
       "required": true,
-      "default": 48.8566,
-      "min": -90,
-      "max": 90
+      "default": ""
     },
     {
-      "key": "longitude",
-      "type": "number",
-      "label": { "en": "Longitude", "fr": "Longitude" },
-      "description": {
-        "en": "Longitude used for the demo weather sensor.",
-        "fr": "Longitude utilisée par le capteur météo de démonstration."
+      "key": "token_id",
+      "type": "string",
+      "label": {
+        "en": "Token ID",
+        "fr": "ID du jeton",
+        "de": "Token ID",
+        "es": "ID del token"
       },
-      "placeholder": { "en": "e.g. 2.3522", "fr": "ex. 2.3522" },
       "required": true,
-      "default": 2.3522,
-      "min": -180,
-      "max": 180
+      "default": ""
     },
     {
-      "key": "unit",
+      "key": "token_secret",
+      "type": "secret",
+      "label": {
+        "en": "Token secret",
+        "fr": "Secret du jeton",
+        "de": "Token Geheimnis",
+        "es": "Secreto del token"
+      },
+      "description": {
+        "en": "Shown once, when the token is created.",
+        "fr": "Affiché une seule fois, à la création du jeton.",
+        "de": "Wird nur einmal angezeigt, beim Erstellen des Tokens.",
+        "es": "Se muestra una sola vez, al crear el token."
+      },
+      "required": true
+    },
+    {
+      "key": "refresh_minutes",
       "type": "select",
-      "label": { "en": "Temperature unit", "fr": "Unité de température" },
+      "label": {
+        "en": "Read BookStack every",
+        "fr": "Lire BookStack toutes les",
+        "de": "BookStack lesen alle",
+        "es": "Leer BookStack cada"
+      },
+      "description": {
+        "en": "Changed pages are announced at the next read.",
+        "fr": "Les pages modifiées sont annoncées à la lecture suivante.",
+        "de": "Geänderte Seiten werden beim nächsten Lesen gemeldet.",
+        "es": "Las páginas modificadas se anuncian en la siguiente lectura."
+      },
       "required": false,
-      "default": "celsius",
+      "default": "15",
       "options": [
-        { "value": "celsius", "label": { "en": "Celsius", "fr": "Celsius" } },
-        { "value": "fahrenheit", "label": { "en": "Fahrenheit", "fr": "Fahrenheit" } }
+        {
+          "value": "5",
+          "label": {
+            "en": "5 minutes",
+            "fr": "5 minutes",
+            "de": "5 Minuten",
+            "es": "5 minutos"
+          }
+        },
+        {
+          "value": "15",
+          "label": {
+            "en": "15 minutes",
+            "fr": "15 minutes",
+            "de": "15 Minuten",
+            "es": "15 minutos"
+          }
+        },
+        {
+          "value": "30",
+          "label": {
+            "en": "30 minutes",
+            "fr": "30 minutes",
+            "de": "30 Minuten",
+            "es": "30 minutos"
+          }
+        },
+        {
+          "value": "60",
+          "label": {
+            "en": "60 minutes",
+            "fr": "60 minutes",
+            "de": "60 Minuten",
+            "es": "60 minutos"
+          }
+        }
       ]
     },
     {
-      "key": "poll_frequency",
-      "type": "number",
-      "label": { "en": "Refresh interval (s)", "fr": "Intervalle de rafraîchissement (s)" },
+      "key": "language",
+      "type": "select",
+      "label": {
+        "en": "Language of names and messages",
+        "fr": "Langue des noms et messages",
+        "de": "Sprache der Namen und Meldungen",
+        "es": "Idioma de nombres y mensajes"
+      },
       "description": {
-        "en": "How often sensors are polled, in seconds (one minute minimum).",
-        "fr": "Fréquence d'interrogation des capteurs, en secondes (une minute minimum)."
+        "en": "Feature names are set when a device is added to Gladys.",
+        "fr": "Les noms des fonctionnalités sont fixés à l'ajout d'un appareil dans Gladys.",
+        "de": "Die Namen der Funktionen werden beim Hinzufügen eines Geräts zu Gladys festgelegt.",
+        "es": "Los nombres de las funciones se fijan al añadir un dispositivo a Gladys."
       },
       "required": false,
-      "default": 300,
-      "min": 60,
-      "max": 3600
+      "default": "fr",
+      "options": [
+        {
+          "value": "en",
+          "label": {
+            "en": "English",
+            "fr": "Anglais",
+            "de": "Englisch",
+            "es": "Inglés"
+          }
+        },
+        {
+          "value": "fr",
+          "label": {
+            "en": "French",
+            "fr": "Français",
+            "de": "Französisch",
+            "es": "Francés"
+          }
+        },
+        {
+          "value": "de",
+          "label": {
+            "en": "German",
+            "fr": "Allemand",
+            "de": "Deutsch",
+            "es": "Alemán"
+          }
+        },
+        {
+          "value": "es",
+          "label": {
+            "en": "Spanish",
+            "fr": "Espagnol",
+            "de": "Spanisch",
+            "es": "Español"
+          }
+        }
+      ]
     }
   ],
   "actions": [
     {
-      "key": "test_weather",
-      "label": { "en": "Test the weather provider", "fr": "Tester le fournisseur météo" },
-      "timeout_seconds": 30
-    },
-    {
-      "key": "identify",
-      "label": { "en": "Identify a device", "fr": "Identifier un appareil" },
-      "fields": [
-        {
-          "key": "device",
-          "type": "select",
-          "source": "devices",
-          "label": { "en": "Device", "fr": "Appareil" },
-          "required": true
-        }
-      ]
+      "key": "test_connection",
+      "label": {
+        "en": "Test the connection",
+        "fr": "Tester la connexion",
+        "de": "Verbindung testen",
+        "es": "Probar la conexión"
+      },
+      "timeout_seconds": 60
     }
   ],
   "scene_triggers": [
     {
-      "key": "motion_detected",
-      "label": { "en": "Motion detected", "fr": "Mouvement détecté" },
+      "key": "page_changed",
+      "label": {
+        "en": "BookStack page created or updated",
+        "fr": "Page BookStack créée ou modifiée",
+        "de": "BookStack-Seite erstellt oder geändert",
+        "es": "Página de BookStack creada o modificada"
+      },
       "description": {
-        "en": "A demo motion sensor saw a person or an animal move.",
-        "fr": "Un détecteur de démonstration a vu bouger une personne ou un animal."
+        "en": "A page is created or saved in BookStack (the pages written by this integration excepted).",
+        "fr": "Une page est créée ou enregistrée dans BookStack (hors pages écrites par cette intégration).",
+        "de": "Eine Seite wird in BookStack erstellt oder gespeichert (außer Seiten dieser Integration).",
+        "es": "Se crea o guarda una página en BookStack (salvo las páginas escritas por esta integración)."
       },
       "fields": [
         {
-          "key": "device",
+          "key": "book",
           "type": "select",
           "source": "devices",
-          "label": { "en": "Sensor", "fr": "Détecteur" }
+          "required": false,
+          "label": {
+            "en": "Book (empty: all)",
+            "fr": "Livre (vide : tous)",
+            "de": "Buch (leer: alle)",
+            "es": "Libro (vacío: todos)"
+          },
+          "description": {
+            "en": "A book added as a device in Gladys.",
+            "fr": "Un livre ajouté comme appareil dans Gladys.",
+            "de": "Ein als Gerät zu Gladys hinzugefügtes Buch.",
+            "es": "Un libro añadido como dispositivo en Gladys."
+          }
         },
         {
-          "key": "target",
-          "type": "multi_select",
-          "label": { "en": "What moved", "fr": "Ce qui a bougé" },
+          "key": "change",
+          "type": "select",
+          "required": false,
+          "label": {
+            "en": "Change (empty: both)",
+            "fr": "Changement (vide : les deux)",
+            "de": "Änderung (leer: beide)",
+            "es": "Cambio (vacío: ambos)"
+          },
           "options": [
-            { "value": "person", "label": { "en": "Person", "fr": "Personne" } },
-            { "value": "animal", "label": { "en": "Animal", "fr": "Animal" } }
+            {
+              "value": "created",
+              "label": {
+                "en": "Page created",
+                "fr": "Page créée",
+                "de": "Seite erstellt",
+                "es": "Página creada"
+              }
+            },
+            {
+              "value": "updated",
+              "label": {
+                "en": "Page updated",
+                "fr": "Page modifiée",
+                "de": "Seite aktualisiert",
+                "es": "Página actualizada"
+              }
+            }
           ]
         }
       ],
       "variables": [
         {
-          "key": "target",
+          "key": "page_name",
           "type": "string",
-          "label": { "en": "What moved", "fr": "Ce qui a bougé" }
+          "label": {
+            "en": "Page name",
+            "fr": "Nom de la page",
+            "de": "Seitenname",
+            "es": "Nombre de la página"
+          }
+        },
+        {
+          "key": "book_name",
+          "type": "string",
+          "label": {
+            "en": "Book",
+            "fr": "Livre",
+            "de": "Buch",
+            "es": "Libro"
+          }
+        },
+        {
+          "key": "change",
+          "type": "string",
+          "label": {
+            "en": "Change (created or updated)",
+            "fr": "Changement (created ou updated)",
+            "de": "Änderung (created oder updated)",
+            "es": "Cambio (created o updated)"
+          }
+        },
+        {
+          "key": "url",
+          "type": "string",
+          "label": {
+            "en": "Page address",
+            "fr": "Adresse de la page",
+            "de": "Adresse der Seite",
+            "es": "Dirección de la página"
+          }
+        },
+        {
+          "key": "updated_by",
+          "type": "string",
+          "label": {
+            "en": "Updated by",
+            "fr": "Modifiée par",
+            "de": "Aktualisiert von",
+            "es": "Actualizada por"
+          }
+        },
+        {
+          "key": "tags",
+          "type": "string",
+          "label": {
+            "en": "Tags",
+            "fr": "Étiquettes",
+            "de": "Schlagwörter",
+            "es": "Etiquetas"
+          }
+        },
+        {
+          "key": "page_id",
+          "type": "number",
+          "label": {
+            "en": "Page id",
+            "fr": "Identifiant de la page",
+            "de": "Seiten-ID",
+            "es": "Id. de la página"
+          }
+        }
+      ]
+    },
+    {
+      "key": "tagged_page_changed",
+      "label": {
+        "en": "Tagged BookStack page changed",
+        "fr": "Page BookStack étiquetée modifiée",
+        "de": "Verschlagwortete BookStack-Seite geändert",
+        "es": "Página de BookStack etiquetada modificada"
+      },
+      "description": {
+        "en": "A page carrying a given tag is created or saved in BookStack.",
+        "fr": "Une page portant une étiquette donnée est créée ou enregistrée dans BookStack.",
+        "de": "Eine Seite mit einem bestimmten Schlagwort wird in BookStack erstellt oder gespeichert.",
+        "es": "Se crea o guarda en BookStack una página con una etiqueta concreta."
+      },
+      "fields": [
+        {
+          "key": "tag",
+          "type": "string",
+          "required": true,
+          "label": {
+            "en": "Tag",
+            "fr": "Étiquette",
+            "de": "Schlagwort",
+            "es": "Etiqueta"
+          },
+          "description": {
+            "en": "The tag name, exactly as written in BookStack (e.g. journal).",
+            "fr": "Le nom de l'étiquette, exactement comme dans BookStack (ex. journal).",
+            "de": "Der Name des Schlagworts, genau wie in BookStack (z. B. journal).",
+            "es": "El nombre de la etiqueta, exactamente como en BookStack (p. ej. journal)."
+          }
+        },
+        {
+          "key": "book",
+          "type": "select",
+          "source": "devices",
+          "required": false,
+          "label": {
+            "en": "Book (empty: all)",
+            "fr": "Livre (vide : tous)",
+            "de": "Buch (leer: alle)",
+            "es": "Libro (vacío: todos)"
+          },
+          "description": {
+            "en": "A book added as a device in Gladys.",
+            "fr": "Un livre ajouté comme appareil dans Gladys.",
+            "de": "Ein als Gerät zu Gladys hinzugefügtes Buch.",
+            "es": "Un libro añadido como dispositivo en Gladys."
+          }
+        },
+        {
+          "key": "change",
+          "type": "select",
+          "required": false,
+          "label": {
+            "en": "Change (empty: both)",
+            "fr": "Changement (vide : les deux)",
+            "de": "Änderung (leer: beide)",
+            "es": "Cambio (vacío: ambos)"
+          },
+          "options": [
+            {
+              "value": "created",
+              "label": {
+                "en": "Page created",
+                "fr": "Page créée",
+                "de": "Seite erstellt",
+                "es": "Página creada"
+              }
+            },
+            {
+              "value": "updated",
+              "label": {
+                "en": "Page updated",
+                "fr": "Page modifiée",
+                "de": "Seite aktualisiert",
+                "es": "Página actualizada"
+              }
+            }
+          ]
+        }
+      ],
+      "variables": [
+        {
+          "key": "page_name",
+          "type": "string",
+          "label": {
+            "en": "Page name",
+            "fr": "Nom de la page",
+            "de": "Seitenname",
+            "es": "Nombre de la página"
+          }
+        },
+        {
+          "key": "book_name",
+          "type": "string",
+          "label": {
+            "en": "Book",
+            "fr": "Livre",
+            "de": "Buch",
+            "es": "Libro"
+          }
+        },
+        {
+          "key": "change",
+          "type": "string",
+          "label": {
+            "en": "Change (created or updated)",
+            "fr": "Changement (created ou updated)",
+            "de": "Änderung (created oder updated)",
+            "es": "Cambio (created o updated)"
+          }
+        },
+        {
+          "key": "url",
+          "type": "string",
+          "label": {
+            "en": "Page address",
+            "fr": "Adresse de la page",
+            "de": "Adresse der Seite",
+            "es": "Dirección de la página"
+          }
+        },
+        {
+          "key": "updated_by",
+          "type": "string",
+          "label": {
+            "en": "Updated by",
+            "fr": "Modifiée par",
+            "de": "Aktualisiert von",
+            "es": "Actualizada por"
+          }
+        },
+        {
+          "key": "tags",
+          "type": "string",
+          "label": {
+            "en": "Tags",
+            "fr": "Étiquettes",
+            "de": "Schlagwörter",
+            "es": "Etiquetas"
+          }
+        },
+        {
+          "key": "page_id",
+          "type": "number",
+          "label": {
+            "en": "Page id",
+            "fr": "Identifiant de la page",
+            "de": "Seiten-ID",
+            "es": "Id. de la página"
+          }
+        },
+        {
+          "key": "tag",
+          "type": "string",
+          "label": {
+            "en": "Tag",
+            "fr": "Étiquette",
+            "de": "Schlagwort",
+            "es": "Etiqueta"
+          }
         }
       ]
     }
   ],
   "scene_actions": [
     {
-      "key": "identify_device",
-      "label": { "en": "Identify a device", "fr": "Identifier un appareil" },
-      "description": {
-        "en": "Make a device signal itself (the demo light blinks).",
-        "fr": "Fait se signaler un appareil (la lampe de démonstration clignote)."
+      "key": "create_page",
+      "label": {
+        "en": "Create a BookStack page",
+        "fr": "Créer une page BookStack",
+        "de": "BookStack-Seite erstellen",
+        "es": "Crear una página de BookStack"
       },
-      "timeout_seconds": 15,
+      "description": {
+        "en": "Creates a page in a book, with Markdown content and tags if you want.",
+        "fr": "Crée une page dans un livre, avec un contenu Markdown et des étiquettes si vous le souhaitez.",
+        "de": "Erstellt eine Seite in einem Buch, auf Wunsch mit Markdown-Inhalt und Schlagwörtern.",
+        "es": "Crea una página en un libro, con contenido Markdown y etiquetas si lo desea."
+      },
+      "timeout_seconds": 30,
       "fields": [
         {
-          "key": "device",
-          "type": "select",
-          "source": "devices",
-          "label": { "en": "Device", "fr": "Appareil" },
-          "required": true
+          "key": "book",
+          "type": "string",
+          "required": true,
+          "label": {
+            "en": "Book",
+            "fr": "Livre",
+            "de": "Buch",
+            "es": "Libro"
+          },
+          "description": {
+            "en": "Name of an existing book, as written in BookStack.",
+            "fr": "Nom d'un livre existant, tel qu'écrit dans BookStack.",
+            "de": "Name eines vorhandenen Buchs, wie in BookStack geschrieben.",
+            "es": "Nombre de un libro existente, tal como aparece en BookStack."
+          }
+        },
+        {
+          "key": "name",
+          "type": "string",
+          "required": true,
+          "label": {
+            "en": "Page name",
+            "fr": "Nom de la page",
+            "de": "Seitenname",
+            "es": "Nombre de la página"
+          }
+        },
+        {
+          "key": "content",
+          "type": "string",
+          "required": false,
+          "label": {
+            "en": "Content (optional)",
+            "fr": "Contenu (facultatif)",
+            "de": "Inhalt (optional)",
+            "es": "Contenido (opcional)"
+          },
+          "description": {
+            "en": "Markdown text.",
+            "fr": "Texte Markdown.",
+            "de": "Markdown-Text.",
+            "es": "Texto Markdown."
+          }
+        },
+        {
+          "key": "tags",
+          "type": "string",
+          "required": false,
+          "label": {
+            "en": "Tags (optional)",
+            "fr": "Étiquettes (facultatif)",
+            "de": "Schlagwörter (optional)",
+            "es": "Etiquetas (opcional)"
+          },
+          "placeholder": {
+            "en": "e.g. report, room=kitchen",
+            "fr": "ex. rapport, pièce=cuisine",
+            "de": "z. B. Bericht, Raum=Küche",
+            "es": "p. ej. informe, sala=cocina"
+          },
+          "description": {
+            "en": "Separated by commas; name=value for a tag with a value.",
+            "fr": "Séparées par des virgules ; nom=valeur pour une étiquette avec valeur.",
+            "de": "Durch Kommas getrennt; Name=Wert für ein Schlagwort mit Wert.",
+            "es": "Separadas por comas; nombre=valor para una etiqueta con valor."
+          }
         }
       ],
       "outputs": [
         {
-          "key": "signalled",
+          "key": "page_id",
+          "type": "number",
+          "label": {
+            "en": "Page id",
+            "fr": "Identifiant de la page",
+            "de": "Seiten-ID",
+            "es": "Id. de la página"
+          }
+        },
+        {
+          "key": "page_name",
+          "type": "string",
+          "label": {
+            "en": "Page name",
+            "fr": "Nom de la page",
+            "de": "Seitenname",
+            "es": "Nombre de la página"
+          }
+        },
+        {
+          "key": "book_name",
+          "type": "string",
+          "label": {
+            "en": "Book",
+            "fr": "Livre",
+            "de": "Buch",
+            "es": "Libro"
+          }
+        },
+        {
+          "key": "url",
+          "type": "string",
+          "label": {
+            "en": "Page address",
+            "fr": "Adresse de la page",
+            "de": "Adresse der Seite",
+            "es": "Dirección de la página"
+          }
+        },
+        {
+          "key": "created",
           "type": "boolean",
-          "label": { "en": "Device signalled", "fr": "Appareil signalé" }
+          "label": {
+            "en": "Page created",
+            "fr": "Page créée",
+            "de": "Seite erstellt",
+            "es": "Página creada"
+          }
+        }
+      ]
+    },
+    {
+      "key": "append_line",
+      "label": {
+        "en": "Add a line to a BookStack page",
+        "fr": "Ajouter une ligne à une page BookStack",
+        "de": "Zeile zu einer BookStack-Seite hinzufügen",
+        "es": "Añadir una línea a una página de BookStack"
+      },
+      "description": {
+        "en": "Adds a line at the end of a page (a journal), and creates the page at its first line.",
+        "fr": "Ajoute une ligne à la fin d'une page (un journal), et crée la page à sa première ligne.",
+        "de": "Fügt am Ende einer Seite (eines Journals) eine Zeile hinzu und erstellt die Seite bei der ersten Zeile.",
+        "es": "Añade una línea al final de una página (un diario) y crea la página con su primera línea."
+      },
+      "timeout_seconds": 30,
+      "fields": [
+        {
+          "key": "book",
+          "type": "string",
+          "required": true,
+          "label": {
+            "en": "Book",
+            "fr": "Livre",
+            "de": "Buch",
+            "es": "Libro"
+          },
+          "description": {
+            "en": "Name of an existing book, as written in BookStack.",
+            "fr": "Nom d'un livre existant, tel qu'écrit dans BookStack.",
+            "de": "Name eines vorhandenen Buchs, wie in BookStack geschrieben.",
+            "es": "Nombre de un libro existente, tal como aparece en BookStack."
+          }
+        },
+        {
+          "key": "page",
+          "type": "string",
+          "required": true,
+          "label": {
+            "en": "Page name",
+            "fr": "Nom de la page",
+            "de": "Seitenname",
+            "es": "Nombre de la página"
+          },
+          "placeholder": {
+            "en": "e.g. Boiler log",
+            "fr": "ex. Journal de la chaudière",
+            "de": "z. B. Heizungs-Journal",
+            "es": "p. ej. Diario de la caldera"
+          }
+        },
+        {
+          "key": "line",
+          "type": "string",
+          "required": true,
+          "label": {
+            "en": "Line",
+            "fr": "Ligne",
+            "de": "Zeile",
+            "es": "Línea"
+          }
+        },
+        {
+          "key": "add_time",
+          "type": "boolean",
+          "required": false,
+          "default": true,
+          "label": {
+            "en": "Start with the date and time",
+            "fr": "Commencer par la date et l'heure",
+            "de": "Mit Datum und Uhrzeit beginnen",
+            "es": "Empezar con la fecha y la hora"
+          }
+        }
+      ],
+      "outputs": [
+        {
+          "key": "page_id",
+          "type": "number",
+          "label": {
+            "en": "Page id",
+            "fr": "Identifiant de la page",
+            "de": "Seiten-ID",
+            "es": "Id. de la página"
+          }
+        },
+        {
+          "key": "page_name",
+          "type": "string",
+          "label": {
+            "en": "Page name",
+            "fr": "Nom de la page",
+            "de": "Seitenname",
+            "es": "Nombre de la página"
+          }
+        },
+        {
+          "key": "book_name",
+          "type": "string",
+          "label": {
+            "en": "Book",
+            "fr": "Livre",
+            "de": "Buch",
+            "es": "Libro"
+          }
+        },
+        {
+          "key": "url",
+          "type": "string",
+          "label": {
+            "en": "Page address",
+            "fr": "Adresse de la page",
+            "de": "Adresse der Seite",
+            "es": "Dirección de la página"
+          }
+        },
+        {
+          "key": "created",
+          "type": "boolean",
+          "label": {
+            "en": "Page created",
+            "fr": "Page créée",
+            "de": "Seite erstellt",
+            "es": "Página creada"
+          }
         }
       ]
     }
   ],
   "widgets": [
     {
-      "key": "demo_status",
-      "label": { "en": "Demo status", "fr": "État de la démo" },
-      "description": {
-        "en": "Live temperature and plug power, plug connection and observed location.",
-        "fr": "Température et puissance en direct, connexion de la prise, position observée."
+      "key": "pages",
+      "label": {
+        "en": "BookStack",
+        "fr": "BookStack",
+        "de": "BookStack",
+        "es": "BookStack"
       },
-      "icon": "activity",
-      "action_timeout_seconds": 15
+      "description": {
+        "en": "Counters and the pages changed last.",
+        "fr": "Compteurs et dernières pages modifiées.",
+        "de": "Zähler und zuletzt geänderte Seiten.",
+        "es": "Contadores y últimas páginas modificadas."
+      },
+      "icon": "book",
+      "settings": [
+        {
+          "key": "book",
+          "type": "select",
+          "source": "devices",
+          "required": false,
+          "label": {
+            "en": "Book (empty: all)",
+            "fr": "Livre (vide : tous)",
+            "de": "Buch (leer: alle)",
+            "es": "Libro (vacío: todos)"
+          },
+          "description": {
+            "en": "Pick a book added as a device to list its pages.",
+            "fr": "Choisissez un livre ajouté comme appareil pour lister ses pages.",
+            "de": "Wähle ein als Gerät hinzugefügtes Buch, um seine Seiten aufzulisten.",
+            "es": "Elija un libro añadido como dispositivo para listar sus páginas."
+          }
+        },
+        {
+          "key": "hide_counters",
+          "type": "boolean",
+          "required": false,
+          "default": false,
+          "label": {
+            "en": "Hide the counters",
+            "fr": "Masquer les compteurs",
+            "de": "Zähler ausblenden",
+            "es": "Ocultar los contadores"
+          }
+        }
+      ]
     }
   ]
 }

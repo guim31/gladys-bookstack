@@ -1,0 +1,9 @@
+{
+  "status": 401,
+  "body": {
+    "error": {
+      "message": "No matching API token was found for the provided authorization token",
+      "code": 401
+    }
+  }
+}
