@@ -1,0 +1,14 @@
+{
+  "status": 422,
+  "body": {
+    "error": {
+      "message": "The given data was invalid.",
+      "validation": {
+        "name": ["The name field is required."],
+        "html": ["The html field is required when markdown is not present."],
+        "markdown": ["The markdown field is required when html is not present."]
+      },
+      "code": 422
+    }
+  }
+}

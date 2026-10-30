@@ -1,0 +1,9 @@
+{
+  "status": 401,
+  "body": {
+    "error": {
+      "message": "An authorization token was found on the request but the format appeared incorrect",
+      "code": 401
+    }
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "status": 200,
+  "body": {
+    "data": [
+      {
+        "id": 3,
+        "slug": "famille",
+        "name": "Famille",
+        "description": "",
+        "created_at": "2026-10-30T06:52:15.000000Z",
+        "updated_at": "2026-10-30T06:52:15.000000Z",
+        "owned_by": 1,
+        "created_by": 1,
+        "updated_by": 1,
+        "cover": null
+      }
+    ],
+    "total": 1
+  }
+}

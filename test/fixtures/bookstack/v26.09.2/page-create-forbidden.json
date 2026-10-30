@@ -1,0 +1,9 @@
+{
+  "status": 403,
+  "body": {
+    "error": {
+      "message": "You do not have permission to access the requested page.",
+      "code": 403
+    }
+  }
+}

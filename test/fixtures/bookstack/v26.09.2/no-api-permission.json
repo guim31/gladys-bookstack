@@ -1,0 +1,9 @@
+{
+  "status": 403,
+  "body": {
+    "error": {
+      "message": "The owner of the used API token does not have permission to make API calls",
+      "code": 403
+    }
+  }
+}
